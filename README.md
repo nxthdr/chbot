@@ -7,10 +7,10 @@ Usage: chbot [OPTIONS] --user <USER> --password <PASSWORD> --token <TOKEN>
 
 Options:
       --url <URL>                    [default: https://clickhouse.nxthdr.dev]
-  -u, --user <USER>                  
-  -p, --password <PASSWORD>          
-  -t, --token <TOKEN>                
-      --output-limit <OUTPUT_LIMIT>  [default: 10]
+  -u, --user <USER>                  ClickHouse user
+  -p, --password <PASSWORD>          ClickHouse password
+  -t, --token <TOKEN>                Discord bot token
+      --output-limit <OUTPUT_LIMIT>  Max output lines [default: 10]
   -v, --verbose...                   Increase logging verbosity
   -q, --quiet...                     Decrease logging verbosity
   -h, --help                         Print help

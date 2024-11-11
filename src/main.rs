@@ -21,18 +21,23 @@ struct CLI {
     #[arg(long, default_value = "https://clickhouse.nxthdr.dev")]
     url: String,
 
+    /// ClickHouse user
     #[arg(short, long)]
     user: String,
 
+    /// ClickHouse password
     #[arg(short, long)]
     password: String,
 
+    /// Discord bot token
     #[arg(short, long)]
     token: String,
 
+    /// Max output lines
     #[arg(long, default_value = "10")]
     output_limit: String,
 
+    /// Verbosity level
     #[command(flatten)]
     verbose: Verbosity<InfoLevel>,
 }
