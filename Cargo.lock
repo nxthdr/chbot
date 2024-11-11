@@ -252,8 +252,10 @@ dependencies = [
  "log",
  "poise",
  "reqwest 0.12.9",
+ "sqlparser",
  "tabled",
  "tokio",
+ "url",
 ]
 
 [[package]]
@@ -2043,6 +2045,15 @@ name = "spin"
 version = "0.9.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6980e8d7511241f8acf4aebddbb1ff938df5eebe98691418c4468d0b72a96a67"
+
+[[package]]
+name = "sqlparser"
+version = "0.51.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5fe11944a61da0da3f592e19a45ebe5ab92dc14a779907ff1f08fbb797bfefc7"
+dependencies = [
+ "log",
+]
 
 [[package]]
 name = "stable_deref_trait"
