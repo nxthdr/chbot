@@ -20,5 +20,5 @@ Options:
 ## SQL query checks
 
 The app will parse the SQL query and:
-* Append `LIMIT <output-limit>` clause, overriding existing if it exceeds the limit
-* Append `FORMAT CSVWithNames` for compatibility with the result prettifier, overriding it if necessary
+* append `LIMIT <output-limit>` clause, overriding existing if it exceeds the limit
+* append `FORMAT CSVWithNames` for compatibility with the result prettifier, overriding it if necessary
