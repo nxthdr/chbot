@@ -140,6 +140,9 @@ async fn query(
             return Ok(());
         }
     };
+
+    ctx.defer().await?;
+
     let resp = do_query(query_text, ctx.data().url.clone()).await?;
     let text = pretty_print(resp.text().await?).await;
 
