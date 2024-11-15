@@ -89,10 +89,8 @@ async fn format_query(query: String, output_limit: i32) -> Result<String, Error>
         Some(caps) => Some(caps.get(1).unwrap().as_str().to_string()),
         None => None,
     };
-    if let Some(format) = format {
-        if format != "CSVWithNames" {
-            formatted_query = formatted_query.replace(&format, "CSVWithNames");
-        }
+    if let Some(_) = format {
+        return Err("Please don't put any FORMAT".into());
     } else {
         formatted_query = format!("{} FORMAT CSVWithNames", formatted_query)
     }
@@ -214,14 +212,11 @@ mod tests {
             "SELECT Count() FROM nxthdr.bgp_updates LIMIT 10 FORMAT CSVWithNames".to_string()
         );
 
-        assert_eq!(
-            format_query(
-                "SELECT Count() FROM nxthdr.bgp_updates LIMIT 50 FORMAT Pretty".to_string(),
-                10
-            )
-            .await
-            .unwrap(),
-            "SELECT Count() FROM nxthdr.bgp_updates LIMIT 10 FORMAT CSVWithNames".to_string()
-        );
+        assert!(format_query(
+            "SELECT Count() FROM nxthdr.bgp_updates FORMAT Pretty".to_string(),
+            10
+        )
+        .await
+        .is_err());
     }
 }
