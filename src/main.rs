@@ -4,12 +4,8 @@ use clap_verbosity_flag::{InfoLevel, Verbosity};
 use env_logger::Builder;
 use log::info;
 use poise::serenity_prelude as serenity;
+use regex::Regex;
 use reqwest::{Client, Response};
-use sqlparser::ast::FormatClause::Identifier;
-use sqlparser::ast::Statement::Query;
-use sqlparser::ast::{Expr, Ident, Value};
-use sqlparser::dialect::ClickHouseDialect;
-use sqlparser::parser::Parser as SqlParser;
 use std::io::Write;
 use tabled::settings::Style;
 use url::{ParseError, Url};
@@ -69,49 +65,39 @@ async fn format_url(cli: &CLI) -> Result<String, ParseError> {
     Ok(url.join(&qs)?.to_string())
 }
 
-async fn format_query(query: String, output_limit: String) -> Result<String, Error> {
-    let dialect = ClickHouseDialect {};
-    let ast = SqlParser::parse_sql(&dialect, &query)?;
-    if ast.len() != 1 {
-        return Err(()).map_err(|_| "Only one query is allowed".into());
-    }
-    let mut statement = ast[0].clone();
+async fn format_query(query: String, output_limit: i32) -> Result<String, Error> {
+    let mut formatted_query = query.clone();
 
-    // Check if the query has a limit clause
-    // If it does, check if the limit is greater than the output limit
-    // If it is, set the limit to the output limit
-    match statement {
-        Query(ref mut query) => match &query.limit {
-            Some(Expr::Value(Value::Number(limit, b))) => {
-                let limit: i32 = limit.parse().unwrap();
-                let output_limit = match output_limit.parse() {
-                    Ok(output_limit) => output_limit,
-                    Err(_) => return Err(()).map_err(|_| "Invalid output limit".into()),
-                };
-                if limit > output_limit {
-                    query.limit = Some(Expr::Value(Value::Number(output_limit.to_string(), *b)));
-                }
-            }
-            None => {
-                query.limit = Some(Expr::Value(Value::Number(output_limit.to_string(), false)));
-            }
-            _ => {}
-        },
-        _ => {}
+    let re = Regex::new(r".*LIMIT\s(\d+).*$").unwrap();
+    let limit: Option<i32> = match re.captures(&query) {
+        Some(caps) => Some(caps.get(1).unwrap().as_str().parse().unwrap()),
+        None => None,
     };
-
-    // Set the format clause to CSVWithNames
-    match statement {
-        Query(ref mut query) => {
-            query.format_clause = Some(Identifier(Ident {
-                value: "CSVWithNames".to_string(),
-                quote_style: None,
-            }));
+    if let Some(limit) = limit {
+        if limit > output_limit {
+            formatted_query = query.replace(
+                &format!("LIMIT {}", limit),
+                &format!("LIMIT {}", output_limit),
+            );
         }
-        _ => {}
-    };
+    } else {
+        formatted_query = format!("{} LIMIT {}", query, output_limit)
+    }
 
-    Ok(statement.to_string())
+    let re = Regex::new(r".*FORMAT\s(\S+).*$").unwrap();
+    let format: Option<String> = match re.captures(&formatted_query) {
+        Some(caps) => Some(caps.get(1).unwrap().as_str().to_string()),
+        None => None,
+    };
+    if let Some(format) = format {
+        if format != "CSVWithNames" {
+            formatted_query = formatted_query.replace(&format, "CSVWithNames");
+        }
+    } else {
+        formatted_query = format!("{} FORMAT CSVWithNames", formatted_query)
+    }
+
+    Ok(formatted_query)
 }
 
 async fn do_query(query: String, url: String) -> Result<Response, Error> {
@@ -148,7 +134,8 @@ async fn query(
         }
     };
 
-    let query_text = match format_query(query_text, ctx.data().output_limit.clone()).await {
+    let output_limit: i32 = ctx.data().output_limit.clone().parse().unwrap();
+    let query_text = match format_query(query_text, output_limit).await {
         Ok(query_text) => query_text,
         Err(e) => {
             ctx.say(format!("{}", e)).await?;
@@ -201,19 +188,16 @@ mod tests {
     #[tokio::test]
     async fn test_format_query() {
         assert_eq!(
-            format_query(
-                "SELECT Count() FROM nxthdr.bgp_updates".to_string(),
-                "10".to_string()
-            )
-            .await
-            .unwrap(),
+            format_query("SELECT Count() FROM nxthdr.bgp_updates".to_string(), 10)
+                .await
+                .unwrap(),
             "SELECT Count() FROM nxthdr.bgp_updates LIMIT 10 FORMAT CSVWithNames".to_string()
         );
 
         assert_eq!(
             format_query(
                 "SELECT Count() FROM nxthdr.bgp_updates LIMIT 5".to_string(),
-                "10".to_string()
+                10
             )
             .await
             .unwrap(),
@@ -223,7 +207,7 @@ mod tests {
         assert_eq!(
             format_query(
                 "SELECT Count() FROM nxthdr.bgp_updates LIMIT 50".to_string(),
-                "10".to_string()
+                10
             )
             .await
             .unwrap(),
@@ -233,7 +217,7 @@ mod tests {
         assert_eq!(
             format_query(
                 "SELECT Count() FROM nxthdr.bgp_updates LIMIT 50 FORMAT Pretty".to_string(),
-                "10".to_string()
+                10
             )
             .await
             .unwrap(),
