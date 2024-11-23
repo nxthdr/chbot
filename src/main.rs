@@ -17,6 +17,7 @@ struct Data {
 type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, Data, Error>;
 
+#[allow(clippy::upper_case_acronyms)]
 #[derive(CliParser, Debug)]
 #[command(version, about, long_about = None)]
 struct CLI {
@@ -69,10 +70,9 @@ async fn format_query(query: String, output_limit: i32) -> Result<String, Error>
     let mut formatted_query = query.clone();
 
     let re = Regex::new(r".*LIMIT\s(\d+).*$").unwrap();
-    let limit: Option<i32> = match re.captures(&query) {
-        Some(caps) => Some(caps.get(1).unwrap().as_str().parse().unwrap()),
-        None => None,
-    };
+    let limit: Option<i32> = re
+        .captures(&query)
+        .map(|caps| caps.get(1).unwrap().as_str().parse().unwrap());
     if let Some(limit) = limit {
         if limit > output_limit {
             formatted_query = query.replace(
@@ -85,11 +85,10 @@ async fn format_query(query: String, output_limit: i32) -> Result<String, Error>
     }
 
     let re = Regex::new(r".*FORMAT\s(\S+).*$").unwrap();
-    let format: Option<String> = match re.captures(&formatted_query) {
-        Some(caps) => Some(caps.get(1).unwrap().as_str().to_string()),
-        None => None,
-    };
-    if let Some(_) = format {
+    let format: Option<String> = re
+        .captures(&formatted_query)
+        .map(|caps| caps.get(1).unwrap().as_str().to_string());
+    if format.is_some() {
         return Err("Please don't put any FORMAT".into());
     } else {
         formatted_query = format!("{} FORMAT CSVWithNames", formatted_query)
@@ -105,7 +104,7 @@ async fn do_query(query: String, url: String) -> Result<Response, Error> {
     let time_end = std::time::Instant::now();
     let time_diff = time_end - time_start;
     info!("`{}` took {:?}", query, time_diff);
-    return Ok(resp);
+    Ok(resp)
 }
 
 async fn pretty_print(text: String) -> String {
@@ -116,7 +115,7 @@ async fn pretty_print(text: String) -> String {
 
     // Return the table in a code block
     // This will make it look nice in Discord
-    return format!("```{}```", table);
+    format!("```{}```", table)
 }
 
 #[poise::command(slash_command, prefix_command)]
