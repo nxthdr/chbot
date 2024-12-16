@@ -14,8 +14,5 @@ RUN apt-get update \
 
 COPY --from=builder /usr/local/cargo/bin/chbot /app/chbot
 
-EXPOSE 3000
-EXPOSE 4000
-
 ENTRYPOINT [ "/app/chbot" ]
 CMD [ "--help" ]

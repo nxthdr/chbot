@@ -97,7 +97,7 @@ async fn format_query(query: String, output_limit: i32) -> Result<String, Error>
     Ok(formatted_query)
 }
 
-async fn do_query(query: String, url: String) -> Result<Response, Error> {
+async fn do_query(url: String, query: String) -> Result<Response, Error> {
     let client = Client::new();
     let time_start = std::time::Instant::now();
     let resp = client.post(url).body(query.clone()).send().await?;
@@ -142,7 +142,7 @@ async fn query(
 
     ctx.defer().await?;
 
-    let resp = do_query(query_text, ctx.data().url.clone()).await?;
+    let resp = do_query(ctx.data().url.clone(), query_text).await?;
     let text = pretty_print(resp.text().await?).await;
 
     ctx.say(text).await?;
