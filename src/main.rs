@@ -1,13 +1,11 @@
-use chrono::Local;
+use anyhow::Result;
 use clap::Parser as CliParser;
 use clap_verbosity_flag::{InfoLevel, Verbosity};
-use env_logger::Builder;
-use log::info;
 use poise::serenity_prelude as serenity;
 use regex::Regex;
 use reqwest::{Client, Response};
-use std::io::Write;
 use tabled::settings::Style;
+use tracing::info;
 use url::{ParseError, Url};
 
 struct Data {
@@ -20,7 +18,7 @@ type Context<'a> = poise::Context<'a, Data, Error>;
 #[allow(clippy::upper_case_acronyms)]
 #[derive(CliParser, Debug)]
 #[command(version, about, long_about = None)]
-struct CLI {
+struct Cli {
     #[arg(long, default_value = "https://clickhouse.nxthdr.dev")]
     url: String,
 
@@ -45,22 +43,18 @@ struct CLI {
     verbose: Verbosity<InfoLevel>,
 }
 
-fn set_logging(cli: &CLI) {
-    Builder::new()
-        .format(|buf, record| {
-            writeln!(
-                buf,
-                "{} [{}] - {}",
-                Local::now().format("%Y-%m-%dT%H:%M:%S"),
-                record.level(),
-                record.args()
-            )
-        })
-        .filter_module("chbot", cli.verbose.log_level_filter())
-        .init();
+fn set_tracing(cli: &Cli) -> Result<()> {
+    let subscriber = tracing_subscriber::fmt()
+        .compact()
+        .with_file(true)
+        .with_line_number(true)
+        .with_max_level(cli.verbose)
+        .finish();
+    tracing::subscriber::set_global_default(subscriber)?;
+    Ok(())
 }
 
-async fn format_url(cli: &CLI) -> Result<String, ParseError> {
+async fn format_url(cli: &Cli) -> Result<String, ParseError> {
     let url = Url::parse(&cli.url)?;
     let qs = format!("?user={}&password={}", cli.user, cli.password);
     Ok(url.join(&qs)?.to_string())
@@ -150,9 +144,9 @@ async fn query(
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Error> {
-    let cli = CLI::parse();
-    set_logging(&cli);
+async fn main() -> Result<()> {
+    let cli = Cli::parse();
+    set_tracing(&cli)?;
 
     let url = format_url(&cli).await?;
     let intents = serenity::GatewayIntents::non_privileged();
